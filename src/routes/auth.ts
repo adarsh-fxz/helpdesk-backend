@@ -1,8 +1,9 @@
 import { Router, Router as ExpressRouter } from "express";
-import { CreateUserSchema, SignInSchema } from "../types";
+import { CreateUserSchema, SignInSchema, ChangePasswordSchema } from "../types";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { PrismaClient } from "@prisma/client";
+import verifyToken from "../middlewares/middleware";
 
 const prisma = new PrismaClient();
 
@@ -89,3 +90,57 @@ authRouter.post('/signin', async (req, res) => {
         });
     }
 })
+
+authRouter.post('/change-password', verifyToken, async (req, res) => {
+    const parsedData = ChangePasswordSchema.safeParse(req.body);
+    if (!parsedData.success) {
+        res.status(400).json({
+            message: "Invalid data",
+        });
+        return;
+    }
+
+    if (parsedData.data.newPassword !== parsedData.data.confirmPassword) {
+        res.status(400).json({
+            message: "New passwords do not match",
+        });
+        return;
+    }
+
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: parsedData.data.userId }
+        });
+
+        if (!user) {
+            res.status(404).json({
+                message: "User not found",
+            });
+            return;
+        }
+
+        const passwordMatch = await bcrypt.compare(parsedData.data.currentPassword, user.password);
+        if (!passwordMatch) {
+            res.status(401).json({
+                message: "Current password is incorrect",
+            });
+            return;
+        }
+
+        const hashedPassword = await bcrypt.hash(parsedData.data.newPassword, 10);
+        await prisma.user.update({
+            where: { id: parsedData.data.userId },
+            data: { password: hashedPassword }
+        });
+
+        res.status(200).json({
+            message: "Password updated successfully",
+        });
+    } catch (e) {
+        console.error("Password change error:", e);
+        res.status(500).json({
+            message: "Internal server error",
+        });
+    }
+});
+
