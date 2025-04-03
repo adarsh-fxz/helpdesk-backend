@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { PrismaClient, Status } from "@prisma/client";
+import { PrismaClient, Status, Role } from "@prisma/client";
 import verifyToken from "../middlewares/middleware";
 
 const prisma = new PrismaClient();
@@ -33,13 +33,96 @@ ticketRouter.post('/create', verifyToken, async (req, res) => {
             data: ticket,
             message: "Ticket created successfully"
         });
-        return;
     } catch (error: any) {
         console.error("Error creating ticket:", error);
         res.status(500).json({
             success: false,
             message: "Failed to create ticket",
             error: error.message
+        });
+    }
+});
+
+// Get user's own tickets
+ticketRouter.get('/my-tickets', verifyToken, async (req, res) => {
+    try {
+        const userId = (req as any).userId;
+        const tickets = await prisma.ticket.findMany({
+            where: { createdById: userId },
+            include: {
+                createdBy: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                },
+                assignedTo: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                }
+            }
+        });
+
+        res.status(200).json({
+            success: true,
+            data: tickets
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Error fetching user tickets"
+        });
+    }
+});
+
+// Get open tickets (for technicians)
+ticketRouter.get('/open', verifyToken, async (req, res) => {
+    try {
+        const userId = (req as any).userId;
+        const user = await prisma.user.findUnique({
+            where: { id: userId }
+        });
+
+        if (user?.role !== Role.TECHNICIAN && user?.role !== Role.ADMIN) {
+            res.status(403).json({
+                success: false,
+                message: "Only technicians and admins can view open tickets"
+            });
+            return;
+        }
+
+        const tickets = await prisma.ticket.findMany({
+            where: { status: Status.OPEN },
+            include: {
+                createdBy: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                },
+                assignedTo: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                }
+            }
+        });
+
+        res.status(200).json({
+            success: true,
+            data: tickets
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Error fetching open tickets"
         });
     }
 });
@@ -119,7 +202,6 @@ ticketRouter.get('/:id', verifyToken, async (req, res) => {
             data: ticket,
             message: "Ticket retrieved successfully"
         });
-        return;
     } catch (error: any) {
         console.error("Error fetching ticket:", error);
         res.status(500).json({
@@ -127,7 +209,6 @@ ticketRouter.get('/:id', verifyToken, async (req, res) => {
             message: "Failed to retrieve ticket",
             error: error.message
         });
-        return;
     }
 });
 
@@ -137,7 +218,6 @@ ticketRouter.put('/:id', verifyToken, async (req, res) => {
         const { id } = req.params;
         const { title, description, status, imageUrls, assignedToId } = req.body;
 
-        // Check if the ticket exists
         const ticketExists = await prisma.ticket.findUnique({
             where: { id }
         });
@@ -147,28 +227,24 @@ ticketRouter.put('/:id', verifyToken, async (req, res) => {
                 success: false,
                 message: "Ticket not found"
             });
-            return
+            return;
         }
 
-        // Prepare update data
         const updateData: any = {};
         if (title !== undefined) updateData.title = title;
         if (description !== undefined) updateData.description = description;
         if (imageUrls !== undefined) updateData.imageUrls = imageUrls;
         if (status !== undefined) updateData.status = status;
 
-        // If status is being changed to CLOSED, set resolvedAt
         if (status === Status.CLOSED && ticketExists.status !== Status.CLOSED) {
             updateData.resolvedAt = new Date();
         }
 
-        // Handle assignedTo relationship
         if (assignedToId) {
             updateData.assignedTo = {
                 connect: { id: assignedToId }
             };
 
-            // If we're assigning the ticket and it's OPEN, change status to ASSIGNED
             if (ticketExists.status === Status.OPEN && !ticketExists.assignedToId) {
                 updateData.status = Status.ASSIGNED;
             }
@@ -210,12 +286,163 @@ ticketRouter.put('/:id', verifyToken, async (req, res) => {
     }
 });
 
+// Assign ticket to technician
+ticketRouter.put('/:id/assign', verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { technicianId } = req.body;
+        const userId = (req as any).userId;
+
+        // Check if current user is admin
+        const user = await prisma.user.findUnique({
+            where: { id: userId }
+        });
+
+        if (user?.role !== Role.ADMIN) {
+            res.status(403).json({
+                success: false,
+                message: "Only admin can assign tickets"
+            });
+            return;
+        }
+
+        // Check if technician exists and is actually a technician
+        const technician = await prisma.user.findUnique({
+            where: { id: technicianId }
+        });
+
+        if (!technician) {
+            res.status(404).json({
+                success: false,
+                message: "Technician not found"
+            });
+            return;
+        }
+
+        if (technician.role !== Role.TECHNICIAN) {
+            res.status(400).json({
+                success: false,
+                message: "User is not a technician"
+            });
+            return;
+        }
+
+        // Check if ticket exists
+        const existingTicket = await prisma.ticket.findUnique({
+            where: { id }
+        });
+
+        if (!existingTicket) {
+            res.status(404).json({
+                success: false,
+                message: "Ticket not found"
+            });
+            return;
+        }
+
+        // Update the ticket
+        const ticket = await prisma.ticket.update({
+            where: { id },
+            data: {
+                assignedToId: technicianId,
+                status: Status.ASSIGNED
+            },
+            include: {
+                createdBy: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                },
+                assignedTo: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        role: true
+                    }
+                }
+            }
+        });
+
+        res.status(200).json({
+            success: true,
+            data: ticket,
+            message: "Ticket assigned successfully"
+        });
+    } catch (error) {
+        console.error("Error assigning ticket:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error assigning ticket"
+        });
+    }
+});
+
+// Update ticket status
+ticketRouter.put('/:id/status', verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+        const userId = (req as any).userId;
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId }
+        });
+
+        const ticket = await prisma.ticket.findUnique({
+            where: { id },
+            include: { assignedTo: true }
+        });
+
+        if (!ticket) {
+            res.status(404).json({
+                success: false,
+                message: "Ticket not found"
+            });
+            return;
+        }
+
+        if (user?.role !== Role.ADMIN && 
+            (user?.role !== Role.TECHNICIAN || ticket.assignedTo?.id !== userId)) {
+            res.status(403).json({
+                success: false,
+                message: "You don't have permission to update this ticket's status"
+            });
+            return;
+        }
+
+        const updatedTicket = await prisma.ticket.update({
+            where: { id },
+            data: { 
+                status: status as Status,
+                resolvedAt: status === Status.CLOSED ? new Date() : undefined
+            },
+            include: {
+                createdBy: true,
+                assignedTo: true
+            }
+        });
+
+        res.status(200).json({
+            success: true,
+            data: updatedTicket,
+            message: "Ticket status updated successfully"
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Error updating ticket status"
+        });
+    }
+});
+
 // Delete a ticket
 ticketRouter.delete('/:id', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Check if the ticket exists
         const ticketExists = await prisma.ticket.findUnique({
             where: { id }
         });
@@ -225,7 +452,7 @@ ticketRouter.delete('/:id', verifyToken, async (req, res) => {
                 success: false,
                 message: "Ticket not found"
             });
-            return
+            return;
         }
 
         await prisma.ticket.delete({
