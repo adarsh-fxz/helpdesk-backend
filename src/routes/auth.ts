@@ -82,6 +82,7 @@ authRouter.post('/signin', async (req, res) => {
 
         res.json({
             token,
+            user
         });
         
     } catch (e) {
