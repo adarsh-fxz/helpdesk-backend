@@ -9,7 +9,7 @@ export const ticketRouter = Router();
 // Create a ticket
 ticketRouter.post('/create', verifyToken, async (req, res) => {
     try {
-        const { title, description, imageUrls = [] } = req.body;
+        const { title, description, imageUrls = [], notify = true } = req.body;
         const userId = (req as any).userId;
 
         const ticket = await prisma.ticket.create({
@@ -27,6 +27,28 @@ ticketRouter.post('/create', verifyToken, async (req, res) => {
                 assignedTo: true
             }
         });
+
+        // Create notifications for admins and technicians if notify is true
+        if (notify) {
+            const adminsAndTechnicians = await prisma.user.findMany({
+                where: {
+                    role: {
+                        in: [Role.ADMIN, Role.TECHNICIAN]
+                    }
+                }
+            });
+
+            // Create notifications for each admin/technician
+            await Promise.all(adminsAndTechnicians.map(user => 
+                prisma.notification.create({
+                    data: {
+                        userId: user.id,
+                        message: `New support ticket "${ticket.title}" has been created and requires attention`,
+                        isRead: false
+                    }
+                })
+            ));
+        }
 
         res.status(201).json({
             success: true,
