@@ -5,6 +5,7 @@ import { authRouter } from "./routes/auth";
 import { ticketRouter } from "./routes/ticket";
 import { userRouter } from "./routes/user";
 import { notificationRouter } from "./routes/notification";
+import { technicianRouter } from "./routes/technician";
 
 dotenv.config();
 
@@ -16,9 +17,10 @@ app.use(express.json());
 
 // Routes
 app.use("/api/auth", authRouter);
-app.use("/api/ticket", ticketRouter);
 app.use("/api/user", userRouter);
+app.use("/api/ticket", ticketRouter);
 app.use("/api/notification", notificationRouter);
+app.use("/api/technician", technicianRouter);
 
 const PORT = process.env.PORT || 5000;
 
