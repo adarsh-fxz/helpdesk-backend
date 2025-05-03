@@ -315,15 +315,25 @@ ticketRouter.put('/:id/assign', verifyToken, async (req, res) => {
         const { technicianId } = req.body;
         const userId = (req as any).userId;
 
-        // Check if current user is admin
+        // Check if current user is admin or technician
         const user = await prisma.user.findUnique({
             where: { id: userId }
         });
 
-        if (user?.role !== Role.ADMIN) {
+        // If user is not admin or technician, deny access
+        if (user?.role !== Role.ADMIN && user?.role !== Role.TECHNICIAN) {
             res.status(403).json({
                 success: false,
-                message: "Only admin can assign tickets"
+                message: "Only admin and technicians can assign tickets"
+            });
+            return;
+        }
+
+        // If user is technician, they can only assign to themselves
+        if (user?.role === Role.TECHNICIAN && technicianId !== userId) {
+            res.status(403).json({
+                success: false,
+                message: "Technicians can only assign tickets to themselves"
             });
             return;
         }
