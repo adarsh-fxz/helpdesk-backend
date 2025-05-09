@@ -30,6 +30,16 @@ model Notification {
   updatedAt DateTime @updatedAt
 }
 
+model Feedback {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  subject String
+  message String
+  rating Int
+  userId String @db.ObjectId
+  user User @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
+
 model User {
   id String @id @default(auto()) @map("_id") @db.ObjectId
   name String
@@ -40,6 +50,7 @@ model User {
   createdTickets Ticket[] @relation("CreatedTickets")
   assignedTickets Ticket[] @relation("AssignedTickets")
   notifications Notification[]
+  feedback Feedback[]
 }
 
 model Ticket {
