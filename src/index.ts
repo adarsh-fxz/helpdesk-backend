@@ -6,6 +6,7 @@ import { ticketRouter } from "./routes/ticket";
 import { userRouter } from "./routes/user";
 import { notificationRouter } from "./routes/notification";
 import { technicianRouter } from "./routes/technician";
+import feedbackRouter from "./routes/feedbackRoutes";
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ app.use("/api/user", userRouter);
 app.use("/api/ticket", ticketRouter);
 app.use("/api/notification", notificationRouter);
 app.use("/api/technician", technicianRouter);
+app.use("/api/feedback", feedbackRouter);
 
 const PORT = process.env.PORT || 5000;
 
