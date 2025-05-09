@@ -95,7 +95,12 @@ userRouter.get('/profile', verifyToken, async (req, res) => {
                 name: true,
                 email: true,
                 role: true,
-                createdAt: true
+                phone: true,
+                bio: true,
+                department: true,
+                location: true,
+                createdAt: true,
+                updatedAt: true
             }
         });
 
@@ -217,6 +222,48 @@ userRouter.delete('/:userId', verifyToken, async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Error deleting user"
+        });
+    }
+});
+
+// Update user profile
+userRouter.put('/profile', verifyToken, async (req, res) => {
+    try {
+        const userId = (req as any).userId;
+        const { name, phone, bio, department, location } = req.body;
+
+        const updatedUser = await prisma.user.update({
+            where: { id: userId },
+            data: {
+                name: name,
+                phone: phone,
+                bio: bio,
+                department: department,
+                location: location,
+            },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                phone: true,
+                bio: true,
+                department: true,
+                location: true,
+                createdAt: true,
+                updatedAt: true
+            }
+        });
+
+        res.status(200).json({
+            success: true,
+            data: updatedUser,
+            message: "Profile updated successfully"
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Error updating profile"
         });
     }
 }); 

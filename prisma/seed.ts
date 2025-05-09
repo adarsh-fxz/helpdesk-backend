@@ -28,7 +28,12 @@ async function main() {
                 name: 'Admin User',
                 email: adminEmail,
                 password: hashedPassword,
-                role: Role.ADMIN
+                role: Role.ADMIN,
+                phone: '+1234567890',
+                bio: 'System administrator with full access.',
+                department: 'Administration',
+                location: 'Head Office',
+                avatar: '',
             }
         });
         console.log('Admin user created successfully');
