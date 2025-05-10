@@ -82,7 +82,8 @@ authRouter.post('/signin', async (req, res) => {
 
         res.json({
             token,
-            user
+            id: user.id,
+            role: user.role
         });
         
     } catch (e) {

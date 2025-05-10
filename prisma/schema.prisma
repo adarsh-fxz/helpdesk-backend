@@ -65,6 +65,9 @@ model Ticket {
   description String
   imageUrls String[]
   status Status @default(OPEN)
+  location String?
+  latitude Float?
+  longitude Float?
   createdById String @map("createdBy") @db.ObjectId
   createdBy User @relation("CreatedTickets", fields: [createdById], references: [id])
   assignedToId String? @map("assignedTo") @db.ObjectId

@@ -9,7 +9,7 @@ export const ticketRouter = Router();
 // Create a ticket
 ticketRouter.post('/create', verifyToken, async (req, res) => {
     try {
-        const { title, description, imageUrls = [], notify = true } = req.body;
+        const { title, description, imageUrls = [], location, latitude, longitude, notify = true } = req.body;
         const userId = (req as any).userId;
 
         const ticket = await prisma.ticket.create({
@@ -17,6 +17,9 @@ ticketRouter.post('/create', verifyToken, async (req, res) => {
                 title,
                 description,
                 imageUrls,
+                location,
+                latitude,
+                longitude,
                 status: Status.OPEN,
                 createdBy: {
                     connect: { id: userId }
@@ -71,7 +74,17 @@ ticketRouter.get('/my-tickets', verifyToken, async (req, res) => {
         const userId = (req as any).userId;
         const tickets = await prisma.ticket.findMany({
             where: { createdById: userId },
-            include: {
+            select: {
+                id: true,
+                title: true,
+                description: true,
+                status: true,
+                createdAt: true,
+                resolvedAt: true,
+                location: true,
+                latitude: true,
+                longitude: true,
+                imageUrls: true,
                 createdBy: {
                     select: {
                         id: true,
@@ -118,8 +131,22 @@ ticketRouter.get('/open', verifyToken, async (req, res) => {
         }
 
         const tickets = await prisma.ticket.findMany({
-            where: { status: Status.OPEN },
-            include: {
+            where: { 
+                status: {
+                    in: [Status.OPEN, Status.ASSIGNED, Status.IN_PROGRESS]
+                }
+            },
+            select: {
+                id: true,
+                title: true,
+                description: true,
+                status: true,
+                createdAt: true,
+                resolvedAt: true,
+                location: true,
+                latitude: true,
+                longitude: true,
+                imageUrls: true,
                 createdBy: {
                     select: {
                         id: true,
