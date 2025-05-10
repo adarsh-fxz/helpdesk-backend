@@ -151,7 +151,8 @@ ticketRouter.get('/open', verifyToken, async (req, res) => {
                     select: {
                         id: true,
                         name: true,
-                        email: true
+                        email: true,
+                        phone: true
                     }
                 },
                 assignedTo: {

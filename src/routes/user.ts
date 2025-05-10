@@ -28,6 +28,7 @@ userRouter.get('/users', verifyToken, async (req, res) => {
                 id: true,
                 name: true,
                 email: true,
+                phone: true,
                 role: true,
                 createdAt: true
             }
@@ -67,6 +68,7 @@ userRouter.get('/technicians', verifyToken, async (req, res) => {
                 id: true,
                 name: true,
                 email: true,
+                phone: true,
                 role: true,
                 createdAt: true
             }
