@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { PrismaClient, Status, Role } from "@prisma/client";
 import verifyToken from "../middlewares/middleware";
 
@@ -96,7 +96,8 @@ ticketRouter.get('/my-tickets', verifyToken, async (req, res) => {
                     select: {
                         id: true,
                         name: true,
-                        email: true
+                        email: true,
+                        phone: true
                     }
                 }
             }
@@ -159,7 +160,8 @@ ticketRouter.get('/open', verifyToken, async (req, res) => {
                     select: {
                         id: true,
                         name: true,
-                        email: true
+                        email: true,
+                        phone: true
                     }
                 }
             }
@@ -173,6 +175,84 @@ ticketRouter.get('/open', verifyToken, async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Error fetching open tickets"
+        });
+    }
+});
+
+// Get tickets assigned to the current technician
+ticketRouter.get('/assigned', verifyToken, async (req, res) => {
+    try {
+        const userId = (req as any).userId;
+        const currentUser = await prisma.user.findUnique({
+            where: { id: userId }
+        });
+
+        if (!currentUser) {
+            res.status(403).json({
+                success: false,
+                message: "User not found"
+            });
+            return;
+        }
+
+        // If user is not admin or technician, deny access
+        if (currentUser.role !== Role.TECHNICIAN && currentUser.role !== Role.ADMIN) {
+            res.status(403).json({
+                success: false,
+                message: "Only technicians and admins can view assigned tickets"
+            });
+            return;
+        }
+
+        // Build the where clause based on user role
+        const whereClause = currentUser.role === Role.ADMIN 
+            ? { assignedToId: { not: null } }  // Show all assigned tickets for admins
+            : { assignedToId: userId };        // Show only tickets assigned to the technician
+
+        const assignedTickets = await prisma.ticket.findMany({
+            where: whereClause,
+            select: {
+                id: true,
+                title: true,
+                description: true,
+                status: true,
+                createdAt: true,
+                resolvedAt: true,
+                location: true,
+                latitude: true,
+                longitude: true,
+                imageUrls: true,
+                createdBy: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        phone: true
+                    }
+                },
+                assignedTo: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        phone: true
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
+        });
+
+        res.status(200).json({
+            success: true,
+            data: assignedTickets
+        });
+    } catch (error) {
+        console.error('Error fetching assigned tickets:', error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching assigned tickets"
         });
     }
 });
@@ -495,6 +575,70 @@ ticketRouter.put('/:id/status', verifyToken, async (req, res) => {
             success: false,
             message: "Error updating ticket status"
         });
+    }
+});
+
+// Unassign ticket
+ticketRouter.put('/:id/unassign', verifyToken, async (req: Request, res: Response) => {
+    try {
+        const ticketId = req.params.id;
+        const userId = (req as any).userId;
+
+        // Get the ticket
+        const ticket = await prisma.ticket.findUnique({
+            where: { id: ticketId },
+            include: { assignedTo: true }
+        });
+
+        if (!ticket) {
+            res.status(404).json({ success: false, message: 'Ticket not found' });
+            return;
+        }
+
+        // Check if the current user is the assigned technician
+        if (ticket.assignedTo?.id !== userId) {
+            res.status(403).json({ 
+                success: false, 
+                message: 'Only the assigned technician can unassign this ticket' 
+            });
+            return;
+        }
+
+        // Update the ticket to remove assignment and set status to OPEN
+        const updatedTicket = await prisma.ticket.update({
+            where: { id: ticketId },
+            data: {
+                assignedToId: null,
+                status: Status.OPEN
+            },
+            include: {
+                createdBy: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        phone: true
+                    }
+                },
+                assignedTo: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        phone: true
+                    }
+                }
+            }
+        });
+
+        res.json({
+            success: true,
+            message: 'Ticket unassigned successfully',
+            data: updatedTicket
+        });
+    } catch (error) {
+        console.error('Error unassigning ticket:', error);
+        res.status(500).json({ success: false, message: 'Failed to unassign ticket' });
     }
 });
 
