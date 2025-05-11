@@ -7,6 +7,8 @@ import { userRouter } from "./routes/user";
 import { notificationRouter } from "./routes/notification";
 import { technicianRouter } from "./routes/technician";
 import feedbackRouter from "./routes/feedbackRoutes";
+import chatRouter from "./routes/chat";
+import "./webSocket";
 
 dotenv.config();
 
@@ -23,6 +25,7 @@ app.use("/api/ticket", ticketRouter);
 app.use("/api/notification", notificationRouter);
 app.use("/api/technician", technicianRouter);
 app.use("/api/feedback", feedbackRouter);
+app.use("/api/chat", chatRouter);
 
 const PORT = process.env.PORT || 5000;
 

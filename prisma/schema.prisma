@@ -40,6 +40,19 @@ model Feedback {
   createdAt DateTime @default(now())
 }
 
+model ChatMessage {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  ticketId String @db.ObjectId
+  ticket Ticket @relation(fields: [ticketId], references: [id])
+  senderId String @db.ObjectId
+  sender User @relation("SentMessages", fields: [senderId], references: [id])
+  message String
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+  @@index([senderId])
+}
+
 model User {
   id String @id @default(auto()) @map("_id") @db.ObjectId
   name String
@@ -57,6 +70,7 @@ model User {
   assignedTickets Ticket[] @relation("AssignedTickets")
   notifications Notification[]
   feedback Feedback[]
+  sentMessages ChatMessage[] @relation("SentMessages")
 }
 
 model Ticket {
@@ -74,4 +88,5 @@ model Ticket {
   assignedTo User? @relation("AssignedTickets", fields: [assignedToId], references: [id])
   createdAt DateTime @default(now())
   resolvedAt DateTime?
+  chatMessages ChatMessage[]
 }
