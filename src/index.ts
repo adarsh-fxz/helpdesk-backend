@@ -9,13 +9,18 @@ import { technicianRouter } from "./routes/technician";
 import feedbackRouter from "./routes/feedbackRoutes";
 import chatRouter from "./routes/chat";
 import "./webSocket";
+import googleAuthRouter from './routes/googleAuth';
 
 dotenv.config();
 
 const app = express();
 
 // Middlewares
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173', 
+  credentials: true,
+}));
+
 app.use(express.json());
 
 // Routes
@@ -26,8 +31,9 @@ app.use("/api/notification", notificationRouter);
 app.use("/api/technician", technicianRouter);
 app.use("/api/feedback", feedbackRouter);
 app.use("/api/chat", chatRouter);
+app.use("/api/googleAuth", googleAuthRouter);
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 app.get("/test", (req, res) => {
     res.send("Test route");
