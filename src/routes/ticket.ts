@@ -85,11 +85,13 @@ ticketRouter.get('/my-tickets', verifyToken, async (req, res) => {
                 latitude: true,
                 longitude: true,
                 imageUrls: true,
+                
                 createdBy: {
                     select: {
                         id: true,
                         name: true,
-                        email: true
+                        email: true,
+                        profilePicture: true
                     }
                 },
                 assignedTo: {
@@ -153,7 +155,8 @@ ticketRouter.get('/open', verifyToken, async (req, res) => {
                         id: true,
                         name: true,
                         email: true,
-                        phone: true
+                        phone: true,
+                        profilePicture: true
                     }
                 },
                 assignedTo: {
@@ -227,7 +230,8 @@ ticketRouter.get('/assigned', verifyToken, async (req, res) => {
                         id: true,
                         name: true,
                         email: true,
-                        phone: true
+                        phone: true,
+                        profilePicture: true,
                     }
                 },
                 assignedTo: {
@@ -235,7 +239,8 @@ ticketRouter.get('/assigned', verifyToken, async (req, res) => {
                         id: true,
                         name: true,
                         email: true,
-                        phone: true
+                        phone: true,
+                        profilePicture: true,
                     }
                 }
             },

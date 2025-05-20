@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { PrismaClient, Role } from "@prisma/client";
 import verifyToken from "../middlewares/middleware";
+import path from "path";
+import { profile } from "console";
+
+
 
 const prisma = new PrismaClient();
 
@@ -30,7 +34,8 @@ userRouter.get('/users', verifyToken, async (req, res) => {
                 email: true,
                 phone: true,
                 role: true,
-                createdAt: true
+                createdAt: true,
+                profilePicture: true
             }
         });
 
@@ -70,7 +75,8 @@ userRouter.get('/technicians', verifyToken, async (req, res) => {
                 email: true,
                 phone: true,
                 role: true,
-                createdAt: true
+                createdAt: true,
+                profilePicture: true
             }
         });
 
@@ -102,7 +108,8 @@ userRouter.get('/profile', verifyToken, async (req, res) => {
                 department: true,
                 location: true,
                 createdAt: true,
-                updatedAt: true
+                updatedAt: true,
+                profilePicture: true
             }
         });
 
@@ -162,7 +169,8 @@ userRouter.put('/:userId/role', verifyToken, async (req, res) => {
                 id: true,
                 name: true,
                 email: true,
-                role: true
+                role: true,
+                profilePicture: true
             }
         });
 
@@ -232,7 +240,7 @@ userRouter.delete('/:userId', verifyToken, async (req, res) => {
 userRouter.put('/profile', verifyToken, async (req, res) => {
     try {
         const userId = (req as any).userId;
-        const { name, phone, bio, department, location } = req.body;
+        const { name, phone, bio, department, location ,profilePicture} = req.body;
 
         const updatedUser = await prisma.user.update({
             where: { id: userId },
@@ -242,6 +250,7 @@ userRouter.put('/profile', verifyToken, async (req, res) => {
                 bio: bio,
                 department: department,
                 location: location,
+                profilePicture: profilePicture,
             },
             select: {
                 id: true,
@@ -252,6 +261,7 @@ userRouter.put('/profile', verifyToken, async (req, res) => {
                 bio: true,
                 department: true,
                 location: true,
+                profilePicture: true,
                 createdAt: true,
                 updatedAt: true
             }
@@ -269,3 +279,4 @@ userRouter.put('/profile', verifyToken, async (req, res) => {
         });
     }
 }); 
+

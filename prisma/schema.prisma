@@ -57,11 +57,12 @@ model User {
   id String @id @default(auto()) @map("_id") @db.ObjectId
   name String
   email String @unique
-  password String
+  password String?  // nullable for OAuth
   role Role
   phone String?
   bio String?
   avatar String?
+  profilePicture String?
   department String?
   location String?
   createdAt DateTime @default(now())
@@ -71,6 +72,8 @@ model User {
   notifications Notification[]
   feedback Feedback[]
   sentMessages ChatMessage[] @relation("SentMessages")
+  googleId  String? 
+  verified  Boolean  @default(false)
 }
 
 model Ticket {
